@@ -1,37 +1,80 @@
-import { Configuration, OpenAIApi } from "openai";
+import { Configuration, OpenAIApi } from 'openai';
+const {PineconeClient} = require('@pinecone-database/pinecone');
 
-const configuration = new Configuration({
+const OPENAI_CONFIG = new Configuration({
   apiKey: process.env.OPENAI_API_KEY,
 });
-const openai = new OpenAIApi(configuration);
+const OPENAI_CLIENT = new OpenAIApi(OPENAI_CONFIG);
+
+const pinecone = new PineconeClient();
+
+
+const MODEL = 'text-embedding-ada-002';
+const INDEX_NAME = 'recipes';
+
+const getEmbeddings = async (input) => {
+  const embeddingsRes = await OPENAI_CLIENT.createEmbedding({
+    model: MODEL,
+    input,
+  });
+
+  const embeddings = embeddingsRes.data.data.map((temp) => {
+    return temp.embedding;
+  });
+
+  return embeddings;
+};
 
 export default async function (req, res) {
-  if (!configuration.apiKey) {
+  if (!OPENAI_CONFIG.apiKey) {
     res.status(500).json({
       error: {
-        message: "OpenAI API key not configured, please follow instructions in README.md",
+        message: 'OpenAI API key not configured, please follow instructions in README.md',
       }
     });
     return;
   }
 
-  const animal = req.body.animal || '';
-  if (animal.trim().length === 0) {
+  const query = req.body.query || '';
+  if (query.trim().length === 0) {
     res.status(400).json({
       error: {
-        message: "Please enter a valid animal",
+        message: 'Please enter a valid query',
       }
     });
     return;
   }
 
   try {
-    const completion = await openai.createCompletion({
-      model: "text-davinci-003",
-      prompt: generatePrompt(animal),
-      temperature: 0.6,
+    console.log(OPENAI_CLIENT);
+    const q = await OPENAI_CLIENT.createEmbedding({
+      model: MODEL,
+      input: [query],
     });
-    res.status(200).json({ result: completion.data.choices[0].text });
+
+    const {data: openAIData} = q;
+    const {data} = openAIData;
+
+    const vector = data[0].embedding;
+
+    await pinecone.init({
+      environment: 'us-east1-gcp',
+      apiKey: process.env.PINECONE_API_KEY,
+    });
+
+    const index = pinecone.Index(INDEX_NAME);
+
+    const resp = await index.query({
+      vector,
+      topK: 5,
+      includeMetadata: true,
+    });
+
+    const {data: pinecodeData} = resp;
+    const {matches} = pinecodeData;
+
+    console.log(matches);
+    res.status(200).json({ matches });
   } catch(error) {
     // Consider adjusting the error handling logic for your use case
     if (error.response) {
@@ -46,17 +89,4 @@ export default async function (req, res) {
       });
     }
   }
-}
-
-function generatePrompt(animal) {
-  const capitalizedAnimal =
-    animal[0].toUpperCase() + animal.slice(1).toLowerCase();
-  return `Suggest three names for an animal that is a superhero.
-
-Animal: Cat
-Names: Captain Sharpclaw, Agent Fluffball, The Incredible Feline
-Animal: Dog
-Names: Ruff the Protector, Wonder Canine, Sir Barks-a-Lot
-Animal: ${capitalizedAnimal}
-Names:`;
 }

@@ -35,6 +35,10 @@ This is an example pet name generator app used in the OpenAI API [quickstart tut
    ```
 6. Add your [API key](https://beta.openai.com/account/api-keys) to the newly created `.env` file
 
+7. create pinecone account, grab API key, we will be using pinecone to store vectorised data and use open API embedding API.
+
+8. run `script/import-data.js`, this will take some time.
+
 7. Run the app
 
    ```bash
@@ -42,3 +46,5 @@ This is an example pet name generator app used in the OpenAI API [quickstart tut
    ```
 
 You should now be able to access the app at [http://localhost:3000](http://localhost:3000)! For the full context behind this example app, check out the [tutorial](https://beta.openai.com/docs/quickstart).
+
+you can now search for recipes.

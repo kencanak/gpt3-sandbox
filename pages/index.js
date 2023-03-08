@@ -3,7 +3,7 @@ import { useState } from "react";
 import styles from "./index.module.css";
 
 export default function Home() {
-  const [animalInput, setAnimalInput] = useState("");
+  const [recipeInput, setRecipeInput] = useState("");
   const [result, setResult] = useState();
 
   async function onSubmit(event) {
@@ -14,7 +14,7 @@ export default function Home() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ animal: animalInput }),
+        body: JSON.stringify({ query: recipeInput }),
       });
 
       const data = await response.json();
@@ -22,8 +22,8 @@ export default function Home() {
         throw data.error || new Error(`Request failed with status ${response.status}`);
       }
 
-      setResult(data.result);
-      setAnimalInput("");
+      setResult(data.matches);
+      // setRecipeInput("");
     } catch(error) {
       // Consider implementing your own error handling logic here
       console.error(error);
@@ -39,19 +39,53 @@ export default function Home() {
       </Head>
 
       <main className={styles.main}>
-        <img src="/dog.png" className={styles.icon} />
-        <h3>Name my pet</h3>
+        <img src="/cooking.png" className={styles.icon} />
+        <h3>find recipe</h3>
         <form onSubmit={onSubmit}>
           <input
             type="text"
             name="animal"
-            placeholder="Enter an animal"
-            value={animalInput}
-            onChange={(e) => setAnimalInput(e.target.value)}
+            placeholder="search for recipe"
+            value={recipeInput}
+            onChange={(e) => setRecipeInput(e.target.value)}
           />
-          <input type="submit" value="Generate names" />
+          <input type="submit" value="Find recipe" />
         </form>
-        <div className={styles.result}>{result}</div>
+        <ul className={styles.result}>
+          {result && result.length && result.map((item) => {
+            return (
+              <li>
+                name: {item.metadata.name}<br/>
+                desc: {item.metadata.description}<br/>
+                time taken: {item.metadata.minutes} minutes<br/>
+                tags: <br/>
+                <ul>
+                  {item.metadata.tags.map((tag) => {
+                    return (
+                      <li>{tag}</li>
+                    )
+                  })}
+                </ul>
+                ingredients: <br/>
+                <ul>
+                  {item.metadata.ingredients.map((ingredient) => {
+                    return (
+                      <li>{ingredient}</li>
+                    )
+                  })}
+                </ul>
+                steps: <br/>
+                <ul>
+                  {item.metadata.steps.map((step) => {
+                    return (
+                      <li>{step}</li>
+                    )
+                  })}
+                </ul>
+              </li>
+            );
+          })}
+        </ul>
       </main>
     </div>
   );
